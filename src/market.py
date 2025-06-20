@@ -35,7 +35,7 @@ def get_embeddings_single(markets: List[Market], model="text-embedding-3-small")
     return res
 
 def get_embeddings(markets: List[Market], model="text-embedding-3-small"):
-    culmulative_tokens = 0
+    cumulative_tokens = 0
     THRESHOLD = 30000
     shtuff = tiktoken.get_encoding("cl100k_base")
     ii = 0
@@ -44,12 +44,12 @@ def get_embeddings(markets: List[Market], model="text-embedding-3-small"):
         if i % 100 == 0:
             print(f"Processing market {i}/{len(markets)}: {market.title}")
         these_tokens = len(shtuff.encode(market.title))
-        if culmulative_tokens + these_tokens > THRESHOLD:
+        if cumulative_tokens + these_tokens > THRESHOLD:
             print(f"Reached token limit at market {i}, processing batch from {ii} to {i}")
             res.extend(get_embeddings_single(markets[ii:i], model=model))
-            culmulative_tokens = 0
+            cumulative_tokens = 0
             ii = i
-        culmulative_tokens += these_tokens
+        cumulative_tokens += these_tokens
     if ii < len(markets):
         res.extend(get_embeddings_single(markets[ii:], model=model))
     assert len(res) == len(markets), "Number of embeddings does not match number of markets"
