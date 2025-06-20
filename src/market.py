@@ -50,7 +50,7 @@ def get_embeddings(markets: List[Market], model="text-embedding-3-small"):
             culmulative_tokens = 0
             ii = i
         culmulative_tokens += these_tokens
-    if ii < len(markets)-1:
+    if ii < len(markets):
         res.extend(get_embeddings_single(markets[ii:], model=model))
     assert len(res) == len(markets), "Number of embeddings does not match number of markets"
     return res
