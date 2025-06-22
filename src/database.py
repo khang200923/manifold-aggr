@@ -5,13 +5,22 @@ import numpy as np
 import psycopg2
 from src.market import Market
 
+logger = logging.getLogger("database")
+logger.setLevel(logging.INFO)
+if not logger.hasHandlers():
+    handler = logging.StreamHandler()
+    handler.setLevel(logging.INFO)
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+
 def db_error_handler(func):
     def wrapper(self: "Database", *args, **kwargs):
         try:
             return func(self, *args, **kwargs)
         except psycopg2.Error as e:
             self.connection.rollback()
-            logging.error("Database error: %s", e)
+            logger.error("Database error: %s", e)
             raise
     return wrapper
 
@@ -30,9 +39,9 @@ class Database:
         if not confirm:
             ans = input("Are you sure you want to reset the database? This will delete all data. (yes/no): ")
             if ans.lower() != "yes":
-                logging.info("Database reset cancelled.")
+                logger.info("Database reset cancelled.")
                 return
-        logging.info("Resetting database...")
+        logger.info("Resetting database...")
         self.cursor.execute("CREATE EXTENSION IF NOT EXISTS vector;")
 
         self.cursor.execute("DROP INDEX IF EXISTS idx_embedding")
@@ -49,7 +58,7 @@ class Database:
             """
         )
         self.connection.commit()
-        logging.info("Database reset complete.")
+        logger.info("Database reset complete.")
 
     @db_error_handler
     def add_market(self, idd: str, market: Market):
@@ -95,7 +104,7 @@ class Database:
         self.connection.commit()
         assert index_exists is not None, "Failed to check if index exists."
         if not index_exists[0]:
-            logging.info("Created index on embeddings for faster search.")
+            logger.info("Created index on embeddings for faster search.")
 
     @db_error_handler
     def update_market(self, idd: str, market: Market):
@@ -129,7 +138,7 @@ class Database:
     def close(self):
         self.cursor.close()
         self.connection.close()
-        logging.info("Database connection closed.")
+        logger.info("Database connection closed.")
 
     def __enter__(self):
         return self
@@ -137,7 +146,7 @@ class Database:
     def __exit__(self, exc_type, exc_value, traceback):
         self.close()
         if exc_type is not None:
-            logging.error("An error occurred: %s", exc_value)
+            logger.error("An error occurred: %s", exc_value)
         return False
 
     def __del__(self):

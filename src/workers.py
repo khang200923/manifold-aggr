@@ -4,6 +4,15 @@ import websockets
 from websockets.legacy.client import WebSocketClientProtocol
 from dataclasses import dataclass, field
 
+wh_logger = logging.getLogger("websocket_handler")
+wh_logger.setLevel(logging.INFO)
+if not wh_logger.hasHandlers():
+    handler = logging.StreamHandler()
+    handler.setLevel(logging.INFO)
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    handler.setFormatter(formatter)
+    wh_logger.addHandler(handler)
+
 @dataclass
 class ManifoldAPIWebsocketHandler:
     uri: str = "wss://api.manifold.markets/ws"
@@ -13,14 +22,14 @@ class ManifoldAPIWebsocketHandler:
         self.connection = await websockets.connect(self.uri) # type: ignore
         if not self.connection.open:
             raise ConnectionError("Failed to open WebSocket connection.")
-        logging.info("Connected to Manifold API WebSocket at %s", self.uri)
+        wh_logger.info("Connected to Manifold API WebSocket at %s", self.uri)
 
     async def disconnect(self):
         if self.connection and self.connection.open:
             await self.connection.close()
-            logging.info("Disconnected from Manifold API WebSocket.")
+            wh_logger.info("Disconnected from Manifold API WebSocket.")
         else:
-            logging.warning("WebSocket connection was not open.")
+            wh_logger.warning("WebSocket connection was not open.")
 
     async def send(self, message: str):
         if not self.connection.open:
@@ -44,7 +53,7 @@ class ManifoldAPIWebsocketHandler:
 
     async def run(self):
         await self.connect()
-        logging.info("WebSocket connection established. Subscribing to messages...")
+        wh_logger.info("WebSocket connection established. Subscribing to messages...")
 
         await self.send(
             '''
@@ -57,37 +66,37 @@ class ManifoldAPIWebsocketHandler:
         )
         message = await self.receive_with_timeout(5)
         if message is None:
-            logging.error("No response received within timeout period.")
+            wh_logger.error("No response received within timeout period.")
             await self.disconnect()
             raise ConnectionError("No response received from WebSocket after subscription.")
-        logging.info("Starting to listen for messages...")
+        wh_logger.info("Starting to listen for messages...")
 
         while True:
             try:
                 message = await self.receive()
-                logging.info("Received message: %s", message)
+                wh_logger.info("Received message: %s", message)
                 asyncio.create_task(self.handle_message(message))
             except (websockets.ConnectionClosed, ConnectionError) as e:
-                logging.error("WebSocket connection error: %s", e)
+                wh_logger.error("WebSocket connection error: %s", e)
                 success = False
                 for _ in range(5):  # Retry 5 times
                     try:
                         await self.connect()
-                        logging.info("Reconnected to WebSocket.")
+                        wh_logger.info("Reconnected to WebSocket.")
                         success = True
                         break
                     except ConnectionError as reconnect_error:
-                        logging.error("Reconnection attempt failed: %s", reconnect_error)
+                        wh_logger.error("Reconnection attempt failed: %s", reconnect_error)
                         await asyncio.sleep(2)
                 if not success:
-                    logging.error("Failed to reconnect after multiple attempts. Exiting.")
+                    wh_logger.error("Failed to reconnect after multiple attempts. Exiting.")
                     break
             except KeyboardInterrupt:
-                logging.info("Keyboard interrupt received. Disconnecting...")
+                wh_logger.info("Keyboard interrupt received. Disconnecting...")
                 await self.disconnect()
                 break
             except Exception as e:
-                logging.error("Error receiving message: %s", e)
+                wh_logger.error("Error receiving message: %s", e)
                 await asyncio.sleep(1)
 
     async def handle_message(self, message: websockets.Data):
