@@ -6,12 +6,12 @@ import psycopg2
 from src.market import Market
 
 def db_error_handler(func):
-    def wrapper(self: Database, *args, **kwargs):
+    def wrapper(self: "Database", *args, **kwargs):
         try:
             return func(self, *args, **kwargs)
         except psycopg2.Error as e:
             self.connection.rollback()
-            logging.error(f"Database error: {e}")
+            logging.error("Database error: %s", e)
             raise
     return wrapper
 
@@ -141,7 +141,4 @@ class Database:
         return False
 
     def __del__(self):
-        try:
-            self.close()
-        except Exception:
-            pass
+        self.close()

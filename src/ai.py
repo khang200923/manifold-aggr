@@ -8,7 +8,7 @@ client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 llm_parse = client.beta.chat.completions.parse
 llm_create = client.chat.completions.create
 def get(filename: str) -> str:
-    with open(filename, 'r') as file:
+    with open(filename, 'r', encoding='utf-8') as file:
         return file.read()
 
 def systemp(value: str):
