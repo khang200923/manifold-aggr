@@ -54,3 +54,9 @@ def get_embeddings(markets: List[Market], model="text-embedding-3-small"):
         res.extend(get_embeddings_single(markets[ii:], model=model))
     assert len(res) == len(markets), "Number of embeddings does not match number of markets"
     return res
+
+def inject_embeddings(markets: List[Market], model="text-embedding-3-small") -> List[Market]:
+    embeddings = get_embeddings(markets, model=model)
+    for market, embedding in zip(markets, embeddings):
+        market.embedding = embedding
+    return markets
